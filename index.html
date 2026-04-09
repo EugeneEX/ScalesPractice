@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scales Practice</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0e0f; --surface: #18181a; --surface2: #222225; --surface3: #2a2a2d;
+    --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.14);
+    --accent: #c8a96e; --accent2: #7eb8c8; --adim: rgba(200,169,110,0.13);
+    --a2dim: rgba(126,184,200,0.13);
+    --text: #f0ece4; --muted: #6b6860; --dim: #2e2c2a; --danger: #c87070;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace;
+    min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+    padding: 28px 18px 52px;
+  }
+  body::before {
+    content: ''; position: fixed; top: -40%; left: -20%; width: 60%; height: 60%;
+    background: radial-gradient(ellipse, rgba(200,169,110,0.04) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  body::after {
+    content: ''; position: fixed; bottom: -30%; right: -10%; width: 50%; height: 50%;
+    background: radial-gradient(ellipse, rgba(126,184,200,0.04) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .app { width: 100%; max-width: 580px; display: flex; flex-direction: column; }
+
+  /* ── HEADER ── */
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+  .logo { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--accent); letter-spacing: 0.02em; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .counter { font-size: 12px; color: var(--muted); letter-spacing: 0.08em; }
+  .btn-settings {
+    background: none; border: 1px solid var(--border2); border-radius: 8px;
+    color: var(--muted); font-family: 'DM Mono', monospace; font-size: 11px;
+    letter-spacing: 0.06em; padding: 5px 12px; cursor: pointer; transition: all 0.15s;
+  }
+  .btn-settings:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+  .btn-settings.open { color: var(--accent); border-color: var(--accent); background: var(--adim); }
+
+  /* ── SETTINGS PANEL ── */
+  .settings-panel {
+    background: var(--surface); border: 1px solid var(--border2); border-radius: 16px;
+    overflow: hidden; margin-bottom: 14px; display: none;
+  }
+  .settings-panel.open { display: block; }
+
+  .s-tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .stab {
+    flex: 1; font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.07em;
+    padding: 11px 6px; background: none; border: none; color: var(--muted);
+    cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s;
+  }
+  .stab:hover { color: var(--text); }
+  .stab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .s-body { padding: 18px 18px 22px; }
+  .s-pane { display: none; }
+  .s-pane.active { display: block; }
+
+  /* ── KEY SELECTOR ── */
+  .ks-section { margin-bottom: 6px; }
+  .ks-section + .ks-section { margin-top: 18px; }
+  .ks-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .ks-title { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .ks-title.maj { color: var(--accent); }
+  .ks-title.min { color: var(--accent2); }
+  .ks-actions { display: flex; gap: 6px; }
+  .btn-xs {
+    font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.05em;
+    padding: 3px 9px; border-radius: 99px; border: 1px solid var(--border2);
+    background: none; color: var(--muted); cursor: pointer; transition: all 0.12s;
+  }
+  .btn-xs:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+
+  .key-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+  .key-btn {
+    font-family: 'DM Mono', monospace; font-size: 12px; padding: 7px 2px;
+    border-radius: 8px; border: 1px solid var(--border); background: var(--surface2);
+    color: var(--muted); cursor: pointer; text-align: center; transition: all 0.12s; user-select: none;
+  }
+  .key-btn:hover { border-color: var(--border2); color: var(--text); }
+  .key-btn.on.maj-key  { background: var(--adim);  border-color: var(--accent);  color: var(--accent);  }
+  .key-btn.on.min-key  { background: var(--a2dim); border-color: var(--accent2); color: var(--accent2); }
+
+  .ks-warn { font-size: 11px; color: var(--danger); margin-top: 10px; display: none; }
+  .ks-warn.show { display: block; }
+
+  /* ── CHORD TOGGLES ── */
+  .cg-header { display: flex; align-items: center; justify-content: space-between; margin: 16px 0 8px; }
+  .cg-header:first-child { margin-top: 0; }
+  .cg-title { font-size: 10px; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; }
+  .toggle-grid { display: flex; flex-wrap: wrap; gap: 5px; }
+  .tpill {
+    font-family: 'DM Mono', monospace; font-size: 11px; padding: 4px 11px;
+    border-radius: 99px; border: 1px solid var(--border); background: transparent;
+    color: var(--muted); cursor: pointer; transition: all 0.13s; letter-spacing: 0.03em; user-select: none;
+  }
+  .tpill:hover { border-color: var(--border2); color: var(--text); }
+  .tpill.on { background: var(--adim); border-color: var(--accent); color: var(--accent); }
+
+  /* ── CATEGORY TOGGLES ── */
+  .cat-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .cpill {
+    font-family: 'DM Mono', monospace; font-size: 10px; padding: 3px 11px;
+    border-radius: 99px; border: 1px solid var(--border2);
+    background: var(--adim); color: var(--accent);
+    cursor: pointer; transition: all 0.13s; user-select: none;
+  }
+  .cpill:not(.on) { background: transparent; color: var(--muted); border-color: var(--border); }
+  .cpill:hover { border-color: var(--border2); }
+
+  /* ── MAIN CARD ── */
+  .card {
+    background: var(--surface); border: 1px solid var(--border2); border-radius: 16px;
+    padding: 44px 36px 36px; position: relative; overflow: hidden;
+    min-height: 268px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 6px;
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(200,169,110,0.35), transparent);
+  }
+  .type-label { font-size: 10px; letter-spacing: 0.14em; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+  .key-display { font-family: 'Playfair Display', serif; font-size: 52px; color: var(--text); line-height: 1; }
+  .key-display .quality { font-size: 26px; color: var(--accent2); font-style: italic; }
+  .divider { width: 32px; height: 1px; background: var(--dim); margin: 14px 0; }
+  .prompt-display { font-size: 34px; font-weight: 500; color: var(--accent); letter-spacing: 0.02em; text-align: center; line-height: 1.2; }
+  .prompt-sub { font-size: 12px; color: var(--muted); margin-top: 4px; text-align: center; }
+  .answer-area { margin-top: 14px; min-height: 28px; text-align: center; }
+  .answer-text {
+    font-size: 20px; color: var(--text); opacity: 0; transform: translateY(6px);
+    transition: all 0.2s ease; letter-spacing: 0.04em;
+  }
+  .answer-text.visible { opacity: 1; transform: translateY(0); }
+
+  /* ── BUTTONS ── */
+  .btn-row { display: flex; gap: 10px; margin-top: 18px; width: 100%; }
+  .btn {
+    font-family: 'DM Mono', monospace; font-size: 13px; letter-spacing: 0.06em;
+    border-radius: 10px; border: 1px solid var(--border2); cursor: pointer; transition: all 0.15s; padding: 13px 20px;
+  }
+  .btn-reveal { flex: 1; background: var(--surface2); color: var(--muted); }
+  .btn-reveal:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+  .btn-next { flex: 2; background: var(--accent); color: #1a1500; border-color: var(--accent); font-weight: 500; }
+  .btn-next:hover { background: #d4b87a; }
+  .btn-next:active { transform: scale(0.98); }
+
+  /* ── TIMER ── */
+  .timer-wrap { width: 100%; height: 2px; background: var(--dim); border-radius: 99px; margin-top: 18px; overflow: hidden; }
+  .timer-bar { height: 100%; background: var(--accent); border-radius: 99px; transition: width 0.1s linear; }
+
+  /* ── STATS ── */
+  .stats { display: flex; justify-content: space-between; margin-top: 16px; padding: 0 2px; }
+  .stat { text-align: center; }
+  .stat-val { font-size: 20px; font-weight: 500; color: var(--text); }
+  .stat-label { font-size: 10px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 2px; }
+  .hint { font-size: 11px; color: var(--dim); text-align: center; margin-top: 12px; letter-spacing: 0.04em; }
+
+  @keyframes flash-in {
+    0%   { opacity: 0; transform: translateY(10px) scale(0.97); }
+    100% { opacity: 1; transform: translateY(0)    scale(1);    }
+  }
+  .flash { animation: flash-in 0.2s ease forwards; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">Scales Practice</div>
+    <div class="header-right">
+      <span class="counter" id="counter">0 done</span>
+      <button class="btn-settings" id="btn-cfg" onclick="togglePanel()">⚙ settings</button>
+    </div>
+  </div>
+
+  <!-- SETTINGS PANEL -->
+  <div class="settings-panel" id="s-panel">
+    <div class="s-tabs">
+      <button class="stab active" onclick="showTab('keys',this)">keys</button>
+      <button class="stab"        onclick="showTab('chords',this)">chords</button>
+      <button class="stab"        onclick="showTab('cats',this)">categories</button>
+    </div>
+    <div class="s-body">
+
+      <!-- KEYS -->
+      <div class="s-pane active" id="pane-keys">
+        <div class="ks-section">
+          <div class="ks-header">
+            <span class="ks-title maj">Major keys</span>
+            <div class="ks-actions">
+              <button class="btn-xs" onclick="setAllKeys('maj',true)">all</button>
+              <button class="btn-xs" onclick="setAllKeys('maj',false)">none</button>
+            </div>
+          </div>
+          <div class="key-grid" id="grid-maj"></div>
+        </div>
+        <div class="ks-section">
+          <div class="ks-header">
+            <span class="ks-title min">Minor keys</span>
+            <div class="ks-actions">
+              <button class="btn-xs" onclick="setAllKeys('min',true)">all</button>
+              <button class="btn-xs" onclick="setAllKeys('min',false)">none</button>
+            </div>
+          </div>
+          <div class="key-grid" id="grid-min"></div>
+        </div>
+        <div class="ks-warn" id="key-warn">Select at least one key to continue.</div>
+      </div>
+
+      <!-- CHORDS -->
+      <div class="s-pane" id="pane-chords">
+        <div id="chord-panel"></div>
+      </div>
+
+      <!-- CATEGORIES -->
+      <div class="s-pane" id="pane-cats">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.65;">
+          Choose which prompt types to include in the exercise.
+        </div>
+        <div class="toggle-grid" id="cat-panel"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACTIVE CATEGORY PILLS -->
+  <div class="cat-row" id="cat-row"></div>
+
+  <!-- DRILL CARD -->
+  <div class="card">
+    <div class="type-label"    id="c-type">—</div>
+    <div class="key-display"   id="c-key">—</div>
+    <div class="divider"></div>
+    <div class="prompt-display" id="c-prompt">—</div>
+    <div class="prompt-sub"    id="c-sub"></div>
+    <div class="answer-area">
+      <div class="answer-text" id="c-answer"></div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-reveal" onclick="reveal()">show answer</button>
+    <button class="btn btn-next"   onclick="next()">next →</button>
+  </div>
+
+  <div class="timer-wrap">
+    <div class="timer-bar" id="timer-bar" style="width:100%"></div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-val" id="s-done">0</div><div class="stat-label">done</div></div>
+    <div class="stat"><div class="stat-val" id="s-avg">—</div><div class="stat-label">avg sec</div></div>
+    <div class="stat"><div class="stat-val" id="s-best">—</div><div class="stat-label">best sec</div></div>
+    <div class="stat"><div class="stat-val" id="s-streak">0</div><div class="stat-label">streak</div></div>
+  </div>
+  <div class="hint">space = next &nbsp;·&nbsp; r = reveal answer</div>
+</div>
+
+<script>
+// ─── SCALE DATA ───────────────────────────────────────────────────────────────
+
+const MAJ_KEYS = ['C','Db','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
+const MIN_KEYS = ['C','C#','D','D#','E','F','F#','G','G#','A','Bb','B'];
+
+const MAJ_NOTES = {
+  C:['C','D','E','F','G','A','B'],       Db:['Db','Eb','F','Gb','Ab','Bb','C'],
+  D:['D','E','F#','G','A','B','C#'],     Eb:['Eb','F','G','Ab','Bb','C','D'],
+  E:['E','F#','G#','A','B','C#','D#'],   F:['F','G','A','Bb','C','D','E'],
+  'F#':['F#','G#','A#','B','C#','D#','E#'], G:['G','A','B','C','D','E','F#'],
+  Ab:['Ab','Bb','C','Db','Eb','F','G'],  A:['A','B','C#','D','E','F#','G#'],
+  Bb:['Bb','C','D','Eb','F','G','A'],    B:['B','C#','D#','E','F#','G#','A#'],
+};
+const MIN_NOTES = {
+  C:['C','D','Eb','F','G','Ab','Bb'],     'C#':['C#','D#','E','F#','G#','A','B'],
+  D:['D','E','F','G','A','Bb','C'],       'D#':['D#','E#','F#','G#','A#','B','C#'],
+  E:['E','F#','G','A','B','C','D'],       F:['F','G','Ab','Bb','C','Db','Eb'],
+  'F#':['F#','G#','A','B','C#','D','E'], G:['G','A','Bb','C','D','Eb','F'],
+  'G#':['G#','A#','B','C#','D#','E','F#'], A:['A','B','C','D','E','F','G'],
+  Bb:['Bb','C','Db','Eb','F','Gb','Ab'],  B:['B','C#','D','E','F#','G','A'],
+};
+
+// ─── DEGREES & INTERVALS ──────────────────────────────────────────────────────
+
+const DEGREES = [
+  {label:'1',     full:'Root',        idx:0},
+  {label:'2',     full:'Major 2nd',   idx:1},
+  {label:'3',     full:'Major 3rd',   idx:2},
+  {label:'4',     full:'Perfect 4th', idx:3},
+  {label:'5',     full:'Perfect 5th', idx:4},
+  {label:'6',     full:'Major 6th',   idx:5},
+  {label:'7',     full:'Major 7th',   idx:6},
+  {label:'b2',    full:'Minor 2nd',   semi:1},
+  {label:'b3',    full:'Minor 3rd',   semi:3},
+  {label:'#4/b5', full:'Tritone',     semi:6},
+  {label:'b6',    full:'Minor 6th',   semi:8},
+  {label:'b7',    full:'Minor 7th',   semi:10},
+];
+
+const INTERVALS = [
+  {label:'min 2nd',semis:1}, {label:'maj 2nd',semis:2},
+  {label:'min 3rd',semis:3}, {label:'maj 3rd',semis:4},
+  {label:'perf 4th',semis:5},{label:'tritone',semis:6},
+  {label:'perf 5th',semis:7},{label:'min 6th',semis:8},
+  {label:'maj 6th',semis:9}, {label:'min 7th',semis:10},
+  {label:'maj 7th',semis:11},{label:'octave',semis:12},
+];
+
+// ─── CHORD LIBRARY ────────────────────────────────────────────────────────────
+
+const CHORD_GROUPS = [
+  { g:'Jazz — Triads', ch:[
+    {id:'maj',    lb:'maj',    nm:'Major triad',             s:[0,4,7]},
+    {id:'min',    lb:'min',    nm:'Minor triad',             s:[0,3,7]},
+    {id:'aug',    lb:'aug',    nm:'Augmented triad',         s:[0,4,8]},
+    {id:'dim',    lb:'dim',    nm:'Diminished triad',        s:[0,3,6]},
+    {id:'sus2',   lb:'sus2',   nm:'Suspended 2nd',           s:[0,2,7]},
+    {id:'sus4',   lb:'sus4',   nm:'Suspended 4th',           s:[0,5,7]},
+  ]},
+  { g:'Jazz — Seventh Chords', ch:[
+    {id:'maj7',   lb:'maj7',   nm:'Major 7th',               s:[0,4,7,11]},
+    {id:'min7',   lb:'min7',   nm:'Minor 7th',               s:[0,3,7,10]},
+    {id:'dom7',   lb:'7',      nm:'Dominant 7th',            s:[0,4,7,10]},
+    {id:'halfdim',lb:'m7b5',   nm:'Half-diminished (ø7)',    s:[0,3,6,10]},
+    {id:'dim7',   lb:'dim7',   nm:'Diminished 7th',          s:[0,3,6,9]},
+    {id:'minmaj7',lb:'mMaj7',  nm:'Minor-major 7th',         s:[0,3,7,11]},
+    {id:'augmaj7',lb:'maj7#5', nm:'Augmented major 7th',     s:[0,4,8,11]},
+    {id:'aug7',   lb:'7#5',    nm:'Augmented dominant 7th',  s:[0,4,8,10]},
+    {id:'maj6',   lb:'maj6',   nm:'Major 6th',               s:[0,4,7,9]},
+    {id:'min6',   lb:'min6',   nm:'Minor 6th',               s:[0,3,7,9]},
+  ]},
+  { g:'Jazz — 9th Chords', ch:[
+    {id:'maj9',   lb:'maj9',   nm:'Major 9th',               s:[0,4,7,11,2]},
+    {id:'min9',   lb:'min9',   nm:'Minor 9th',               s:[0,3,7,10,2]},
+    {id:'dom9',   lb:'9',      nm:'Dominant 9th',            s:[0,4,7,10,2]},
+    {id:'7b9',    lb:'7b9',    nm:'Dominant 7b9',            s:[0,4,7,10,1]},
+    {id:'7s9',    lb:'7#9',    nm:'Dominant 7#9 (Hendrix)',  s:[0,4,7,10,3]},
+    {id:'maj6_9', lb:'6/9',    nm:'Major 6/9',               s:[0,4,7,9,2]},
+    {id:'min6_9', lb:'m6/9',   nm:'Minor 6/9',               s:[0,3,7,9,2]},
+    {id:'7sus4_9',lb:'9sus4',  nm:'9 sus4',                  s:[0,5,7,10,2]},
+    {id:'add9',   lb:'add9',   nm:'Add 9',                   s:[0,4,7,2]},
+    {id:'madd9',  lb:'madd9',  nm:'Minor add 9',             s:[0,3,7,2]},
+  ]},
+  { g:'Jazz — 11th & 13th', ch:[
+    {id:'maj11',  lb:'maj11',  nm:'Major 11th',              s:[0,4,7,11,2,5]},
+    {id:'min11',  lb:'min11',  nm:'Minor 11th',              s:[0,3,7,10,2,5]},
+    {id:'dom11',  lb:'11',     nm:'Dominant 11th',           s:[0,4,7,10,2,5]},
+    {id:'maj13',  lb:'maj13',  nm:'Major 13th',              s:[0,4,7,11,2,9]},
+    {id:'min13',  lb:'min13',  nm:'Minor 13th',              s:[0,3,7,10,2,9]},
+    {id:'dom13',  lb:'13',     nm:'Dominant 13th',           s:[0,4,7,10,2,9]},
+    {id:'7sus4',  lb:'7sus4',  nm:'Dominant 7 sus4',         s:[0,5,7,10]},
+    {id:'13sus4', lb:'13sus4', nm:'13 sus4',                 s:[0,5,7,10,2,9]},
+  ]},
+  { g:'Jazz — Altered & Tension', ch:[
+    {id:'7alt',   lb:'7alt',   nm:'Altered dominant',        s:[0,4,8,10,1,3]},
+    {id:'7b5',    lb:'7b5',    nm:'Dominant 7b5',            s:[0,4,6,10]},
+    {id:'7s11',   lb:'7#11',   nm:'Lydian dominant (7#11)',  s:[0,4,7,10,6]},
+    {id:'9s11',   lb:'9#11',   nm:'9#11 Lydian dominant',    s:[0,4,7,10,2,6]},
+    {id:'7b9b5',  lb:'7b9b5',  nm:'7b9b5',                   s:[0,4,6,10,1]},
+    {id:'7b9s5',  lb:'7b9#5',  nm:'7b9#5',                   s:[0,4,8,10,1]},
+    {id:'7s9b5',  lb:'7#9b5',  nm:'7#9b5',                   s:[0,4,6,10,3]},
+    {id:'7s9s5',  lb:'7#9#5',  nm:'7#9#5',                   s:[0,4,8,10,3]},
+    {id:'7b13',   lb:'7b13',   nm:'Dom 7 flat 13',           s:[0,4,7,10,8]},
+    {id:'13b9',   lb:'13b9',   nm:'13 flat 9',               s:[0,4,7,10,1,9]},
+    {id:'13s9',   lb:'13#9',   nm:'13 sharp 9',              s:[0,4,7,10,3,9]},
+  ]},
+  { g:'Blues', ch:[
+    {id:'bl_7',   lb:'7',      nm:'Dominant 7th (blues)',    s:[0,4,7,10]},
+    {id:'bl_9',   lb:'9',      nm:'Dominant 9th (blues)',    s:[0,4,7,10,2]},
+    {id:'bl_7s9', lb:'7#9',    nm:'7#9 (blue note clash)',   s:[0,4,7,10,3]},
+    {id:'bl_9b5', lb:'9b5',    nm:'9b5 (blues sub)',         s:[0,4,6,10,2]},
+    {id:'bl_13b9',lb:'13b9',   nm:'13b9 (slow blues)',       s:[0,4,7,10,1,9]},
+    {id:'bl_7b9', lb:'7b9',    nm:'7b9 (blues tension)',     s:[0,4,7,10,1]},
+    {id:'bl_dim7',lb:'dim7',   nm:'Diminished 7th (blues pass)',s:[0,3,6,9]},
+    {id:'bl_m7b5',lb:'m7b5',   nm:'Half-dim (blues ii)',     s:[0,3,6,10]},
+    {id:'bl_pow', lb:'5',      nm:'Power chord',             s:[0,7]},
+    {id:'bl_7b13',lb:'7b13',   nm:'7b13 (blues colour)',     s:[0,4,7,10,8]},
+  ]},
+  { g:'Funk & Soul', ch:[
+    {id:'fn_9',   lb:'9',      nm:'Dominant 9th (funk)',     s:[0,4,7,10,2]},
+    {id:'fn_m9',  lb:'min9',   nm:'Minor 9th (funk)',        s:[0,3,7,10,2]},
+    {id:'fn_69',  lb:'6/9',    nm:'6/9 chord',               s:[0,4,7,9,2]},
+    {id:'fn_m69', lb:'m6/9',   nm:'Minor 6/9',               s:[0,3,7,9,2]},
+    {id:'fn_13',  lb:'13',     nm:'Dominant 13th (funk)',    s:[0,4,7,10,2,9]},
+    {id:'fn_9s11',lb:'9#11',   nm:'9#11 (funky Lydian)',     s:[0,4,7,10,2,6]},
+    {id:'fn_m11', lb:'min11',  nm:'Minor 11th (funk)',       s:[0,3,7,10,2,5]},
+    {id:'fn_9sus',lb:'9sus',   nm:'9sus (neo-soul)',         s:[0,5,7,10,2]},
+    {id:'fn_7s9', lb:'7#9',    nm:'7#9 (funk punch)',        s:[0,4,7,10,3]},
+    {id:'fn_m7',  lb:'min7',   nm:'Minor 7th (funk)',        s:[0,3,7,10]},
+    {id:'fn_maj9',lb:'maj9',   nm:'Major 9th (soul)',        s:[0,4,7,11,2]},
+    {id:'fn_7s9s5',lb:'7#9#5', nm:'7#9#5 (super-funk)',      s:[0,4,8,10,3]},
+  ]},
+];
+
+const CHORD_MAP = {};
+CHORD_GROUPS.forEach(g => g.ch.forEach(c => { CHORD_MAP[c.id] = c; }));
+
+// ─── CHROMATIC HELPER ─────────────────────────────────────────────────────────
+
+const CHROM_FLAT  = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+const CHROM_SHARP = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const CHROM_BOTH  = ['C','C#/Db','D','D#/Eb','E','F','F#/Gb','G','G#/Ab','A','A#/Bb','B'];
+
+function rootIdx(note) {
+  for (let i=0;i<12;i++) if (CHROM_FLAT[i]===note||CHROM_SHARP[i]===note) return i;
+  return 0;
+}
+function semiNote(root, s) { return CHROM_BOTH[(rootIdx(root) + s) % 12]; }
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+
+const activeKeys   = new Set([
+  ...MAJ_KEYS.map(k=>k+'-maj'),
+  ...MIN_KEYS.map(k=>k+'-min'),
+]);
+const activeChords = new Set(CHORD_GROUPS.flatMap(g=>g.ch.map(c=>c.id)));
+const activeCats   = new Set(['degrees','intervals','chords']);
+
+let card=null, t0=null, tiv=null, elapsed=0;
+let st={n:0,sum:0,best:Infinity,streak:0};
+
+// ─── BUILD: KEY GRIDS ─────────────────────────────────────────────────────────
+
+function buildKeyGrids() {
+  ['maj','min'].forEach(q => {
+    const keys = q==='maj' ? MAJ_KEYS : MIN_KEYS;
+    const grid = document.getElementById('grid-'+q);
+    keys.forEach(k => {
+      const b = document.createElement('button');
+      b.className = `key-btn on ${q}-key`;
+      b.textContent = k;
+      b.onclick = () => toggleKey(k, q, b);
+      grid.appendChild(b);
+    });
+  });
+}
+
+function toggleKey(k, q, btn) {
+  const id = k+'-'+q;
+  if (activeKeys.has(id)) {
+    if (activeKeys.size <= 1) return;
+    activeKeys.delete(id); btn.classList.remove('on');
+  } else {
+    activeKeys.add(id); btn.classList.add('on');
+  }
+  document.getElementById('key-warn').classList.toggle('show', activeKeys.size===0);
+}
+
+function setAllKeys(q, on) {
+  if (!on) {
+    // ensure other group still has keys
+    const other = q==='maj'?'min':'maj';
+    const otherKeys = other==='maj'?MAJ_KEYS:MIN_KEYS;
+    if (!otherKeys.some(k=>activeKeys.has(k+'-'+other))) return;
+  }
+  const keys = q==='maj' ? MAJ_KEYS : MIN_KEYS;
+  keys.forEach(k => {
+    on ? activeKeys.add(k+'-'+q) : activeKeys.delete(k+'-'+q);
+  });
+  document.querySelectorAll(`#grid-${q} .key-btn`).forEach(b => b.classList.toggle('on', on));
+}
+
+// ─── BUILD: CHORD PANEL ───────────────────────────────────────────────────────
+
+function buildChordPanel() {
+  const panel = document.getElementById('chord-panel');
+  CHORD_GROUPS.forEach(grp => {
+    const hdr = document.createElement('div');
+    hdr.className = 'cg-header';
+    hdr.innerHTML =
+      `<span class="cg-title">${grp.g}</span>
+       <div style="display:flex;gap:6px">
+         <button class="btn-xs" onclick="setGroup('${grp.g}',true)">all</button>
+         <button class="btn-xs" onclick="setGroup('${grp.g}',false)">none</button>
+       </div>`;
+    panel.appendChild(hdr);
+
+    const row = document.createElement('div');
+    row.className = 'toggle-grid';
+    row.dataset.grp = grp.g;
+    grp.ch.forEach(c => {
+      const b = document.createElement('button');
+      b.className = 'tpill on';
+      b.textContent = c.lb;
+      b.title = c.nm;
+      b.dataset.id = c.id;
+      b.onclick = () => {
+        if (activeChords.has(c.id)) {
+          if (activeChords.size<=1) return;
+          activeChords.delete(c.id); b.classList.remove('on');
+        } else {
+          activeChords.add(c.id); b.classList.add('on');
+        }
+      };
+      row.appendChild(b);
+    });
+    panel.appendChild(row);
+  });
+}
+
+function setGroup(grpName, on) {
+  const grp = CHORD_GROUPS.find(g=>g.g===grpName);
+  if (!grp) return;
+  const active = grp.ch.filter(c=>activeChords.has(c.id)).length;
+  if (!on && activeChords.size - active < 1) return;
+  grp.ch.forEach(c => on ? activeChords.add(c.id) : activeChords.delete(c.id));
+  document.querySelectorAll(`[data-grp="${grpName}"] .tpill`)
+    .forEach(b => b.classList.toggle('on', on));
+}
+
+// ─── BUILD: CATEGORY PANEL & PILLS ───────────────────────────────────────────
+
+function buildCatPanel() {
+  const defs = [
+    {id:'degrees',label:'scale degrees'},
+    {id:'intervals',label:'intervals'},
+    {id:'chords',label:'chords'},
+  ];
+  const panel = document.getElementById('cat-panel');
+  defs.forEach(d => {
+    const b = document.createElement('button');
+    b.className = 'tpill on';
+    b.textContent = d.label;
+    b.onclick = () => {
+      if (activeCats.has(d.id)) {
+        if (activeCats.size<=1) return;
+        activeCats.delete(d.id); b.classList.remove('on');
+      } else {
+        activeCats.add(d.id); b.classList.add('on');
+      }
+      refreshCatRow();
+    };
+    panel.appendChild(b);
+  });
+}
+
+function refreshCatRow() {
+  const row = document.getElementById('cat-row');
+  row.innerHTML = '';
+  [...activeCats].forEach(cat => {
+    const p = document.createElement('span');
+    p.className = 'cpill on';
+    p.textContent = cat;
+    row.appendChild(p);
+  });
+}
+
+// ─── SETTINGS PANEL ───────────────────────────────────────────────────────────
+
+function togglePanel() {
+  const p = document.getElementById('s-panel');
+  const b = document.getElementById('btn-cfg');
+  const open = p.classList.toggle('open');
+  b.classList.toggle('open', open);
+  b.textContent = open ? '✕ close' : '⚙ settings';
+}
+
+function showTab(id, el) {
+  document.querySelectorAll('.stab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.s-pane').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('pane-'+id).classList.add('active');
+}
+
+// ─── CARD GENERATION ──────────────────────────────────────────────────────────
+
+function rnd(arr) { return arr[Math.floor(Math.random()*arr.length)]; }
+
+function keyPool() {
+  const pool = [];
+  MAJ_KEYS.forEach(k=>{ if (activeKeys.has(k+'-maj')) pool.push({k,q:'maj'}); });
+  MIN_KEYS.forEach(k=>{ if (activeKeys.has(k+'-min')) pool.push({k,q:'min'}); });
+  return pool;
+}
+
+function makeCard() {
+  const pool = keyPool();
+  if (!pool.length) return null;
+  const {k,q} = rnd(pool);
+  const isMin = q==='min';
+  const notes = isMin ? MIN_NOTES[k] : MAJ_NOTES[k];
+  const ql = isMin?'min':'maj';
+  const cat = rnd([...activeCats]);
+
+  if (cat==='degrees') {
+    const d = rnd(DEGREES);
+    const ans = d.idx!==undefined ? notes[d.idx] : semiNote(k, d.semi);
+    return {type:'degree', k, ql, prompt:d.label, sub:d.full, ans};
+  }
+  if (cat==='intervals') {
+    const iv = rnd(INTERVALS);
+    return {type:'interval', k, ql, prompt:iv.label, sub:`from ${k}`, ans:`${k} → ${semiNote(k,iv.semis)}`};
+  }
+  if (cat==='chords') {
+    const avail = [...activeChords].map(id=>CHORD_MAP[id]).filter(Boolean);
+    if (!avail.length) return makeCard();
+    const ch = rnd(avail);
+    const cNotes = ch.s.map(s=>semiNote(k, s%12));
+    return {type:'chord', k, ql, prompt:ch.lb, sub:ch.nm, ans:cNotes.join(' – ')};
+  }
+}
+
+// ─── DISPLAY ──────────────────────────────────────────────────────────────────
+
+function showCard(c) {
+  if (!c) return;
+  document.getElementById('c-key').innerHTML    = c.k+`<span class="quality"> ${c.ql}</span>`;
+  document.getElementById('c-prompt').textContent = c.prompt;
+  document.getElementById('c-sub').textContent    = c.sub||'';
+  document.getElementById('c-type').textContent   = c.type;
+  document.getElementById('c-answer').textContent = c.ans;
+  document.getElementById('c-answer').classList.remove('visible');
+  ['c-key','c-prompt'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+  });
+}
+
+function reveal() { document.getElementById('c-answer').classList.add('visible'); }
+
+// ─── TIMER ────────────────────────────────────────────────────────────────────
+
+function startTimer() {
+  clearInterval(tiv); elapsed=0; t0=Date.now();
+  const bar=document.getElementById('timer-bar');
+  bar.style.width='100%'; bar.style.background='var(--accent)';
+  tiv=setInterval(()=>{
+    elapsed=(Date.now()-t0)/1000;
+    bar.style.width=Math.max(0,100-(elapsed/15)*100)+'%';
+    bar.style.background=elapsed>8?'var(--accent2)':'var(--accent)';
+  },80);
+}
+function stopTimer() { clearInterval(tiv); return elapsed; }
+
+// ─── NEXT ─────────────────────────────────────────────────────────────────────
+
+function next() {
+  const t = stopTimer();
+  if (card) {
+    st.n++; st.sum+=t;
+    if (t<st.best) st.best=t;
+    st.streak = t<5 ? st.streak+1 : 0;
+    document.getElementById('s-done').textContent   = st.n;
+    document.getElementById('s-avg').textContent    = (st.sum/st.n).toFixed(1);
+    document.getElementById('s-best').textContent   = st.best.toFixed(1);
+    document.getElementById('s-streak').textContent = st.streak;
+    document.getElementById('counter').textContent  = st.n+' done';
+  }
+  card = makeCard();
+  showCard(card);
+  startTimer();
+}
+
+// ─── KEYBOARD ─────────────────────────────────────────────────────────────────
+
+document.addEventListener('keydown', e => {
+  if (e.code==='Space') { e.preventDefault(); next(); }
+  if (e.code==='KeyR')  reveal();
+});
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+
+buildKeyGrids();
+buildChordPanel();
+buildCatPanel();
+refreshCatRow();
+next();
+</script>
+</body>
+</html>
