@@ -458,19 +458,38 @@ function rootIdx(note) {
 }
 function semiNote(root, s) { return CHROM_BOTH[(rootIdx(root) + s) % 12]; }
 
+// ─── PERSISTENCE ─────────────────────────────────────────────────────────────
+
+const STORE_KEY = 'scalesPracticeSettings_v1';
+
+function loadSettings() {
+  try { const r = localStorage.getItem(STORE_KEY); return r ? JSON.parse(r) : null; }
+  catch(e) { return null; }
+}
+
+function saveSettings() {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({
+      keys:   [...activeKeys],
+      chords: [...activeChords],
+      cats:   [...activeCats],
+      autoReveal,
+    }));
+  } catch(e) {}
+}
+
 // ─── STATE ────────────────────────────────────────────────────────────────────
 
-const activeKeys   = new Set([
-  ...MAJ_KEYS.map(k=>k+'-maj'),
-  ...MIN_KEYS.map(k=>k+'-min'),
-]);
-const activeChords = new Set(CHORD_GROUPS.flatMap(g=>g.ch.map(c=>c.id)));
-const activeCats   = new Set(['degrees','intervals','chords']);
+const _s = loadSettings();
+
+const activeKeys   = new Set(_s && _s.keys   ? _s.keys   : [...MAJ_KEYS.map(k=>k+'-maj'), ...MIN_KEYS.map(k=>k+'-min')]);
+const activeChords = new Set(_s && _s.chords ? _s.chords : CHORD_GROUPS.flatMap(g=>g.ch.map(c=>c.id)));
+const activeCats   = new Set(_s && _s.cats   ? _s.cats   : ['degrees','intervals','chords']);
 
 let card=null, t0=null, tiv=null, elapsed=0;
 let st={n:0,sum:0,best:Infinity,streak:0};
-let autoReveal=false;   // "show answer on next" setting
-let awaitingNext=false; // true when answer is shown, waiting for second tap
+let autoReveal   = (_s && _s.autoReveal != null) ? _s.autoReveal : false;
+let awaitingNext = false; // true when answer shown, waiting for second tap
 
 // ─── BUILD: KEY GRIDS ─────────────────────────────────────────────────────────
 
@@ -497,6 +516,7 @@ function toggleKey(k, q, btn) {
     activeKeys.add(id); btn.classList.add('on');
   }
   document.getElementById('key-warn').classList.toggle('show', activeKeys.size===0);
+  saveSettings();
 }
 
 function setAllKeys(q, on) {
@@ -511,6 +531,7 @@ function setAllKeys(q, on) {
     on ? activeKeys.add(k+'-'+q) : activeKeys.delete(k+'-'+q);
   });
   document.querySelectorAll(`#grid-${q} .key-btn`).forEach(b => b.classList.toggle('on', on));
+  saveSettings();
 }
 
 // ─── BUILD: CHORD PANEL ───────────────────────────────────────────────────────
@@ -544,6 +565,7 @@ function buildChordPanel() {
         } else {
           activeChords.add(c.id); b.classList.add('on');
         }
+        saveSettings();
       };
       row.appendChild(b);
     });
@@ -559,6 +581,7 @@ function setGroup(grpName, on) {
   grp.ch.forEach(c => on ? activeChords.add(c.id) : activeChords.delete(c.id));
   document.querySelectorAll(`[data-grp="${grpName}"] .tpill`)
     .forEach(b => b.classList.toggle('on', on));
+  saveSettings();
 }
 
 // ─── BUILD: CATEGORY PANEL & PILLS ───────────────────────────────────────────
@@ -582,6 +605,7 @@ function buildCatPanel() {
         activeCats.add(d.id); b.classList.add('on');
       }
       refreshCatRow();
+      saveSettings();
     };
     panel.appendChild(b);
   });
@@ -692,6 +716,7 @@ function toggleAutoReveal() {
   // if mid-question in auto mode, reset awaiting state cleanly
   awaitingNext = false;
   syncNextBtn();
+  saveSettings();
 }
 
 function syncNextBtn() {
@@ -789,6 +814,40 @@ document.addEventListener('keydown', e => {
 buildKeyGrids();
 buildChordPanel();
 buildCatPanel();
+
+// ── Apply saved state to DOM ──────────────────────────────────────────────────
+
+// Keys: mark only active ones as .on
+document.querySelectorAll('#grid-maj .key-btn').forEach(b => {
+  const key = b.textContent.trim();
+  b.classList.toggle('on', activeKeys.has(key+'-maj'));
+});
+document.querySelectorAll('#grid-min .key-btn').forEach(b => {
+  const key = b.textContent.trim();
+  b.classList.toggle('on', activeKeys.has(key+'-min'));
+});
+
+// Chords: mark only active ones as .on
+document.querySelectorAll('#chord-panel .tpill').forEach(b => {
+  b.classList.toggle('on', activeChords.has(b.dataset.id));
+});
+
+// Categories: mark only active ones as .on
+document.querySelectorAll('#cat-panel .tpill').forEach(b => {
+  const id = ['degrees','intervals','chords'].find(d =>
+    b.textContent.trim() === {degrees:'scale degrees',intervals:'intervals',chords:'chords'}[d]
+  );
+  if (id) b.classList.toggle('on', activeCats.has(id));
+});
+
+// autoReveal toggle
+if (autoReveal) {
+  document.getElementById('toggle-autoreveal').setAttribute('aria-pressed','true');
+  document.querySelector('.btn-reveal').style.display = 'none';
+  document.getElementById('hint-text').textContent = 'space = reveal / next';
+  syncNextBtn();
+}
+
 refreshCatRow();
 next();
 </script>
