@@ -168,6 +168,36 @@
     100% { opacity: 1; transform: translateY(0)    scale(1);    }
   }
   .flash { animation: flash-in 0.2s ease forwards; }
+
+  /* ── BEHAVIOUR PANE ── */
+  .beh-row {
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 20px;
+    padding: 4px 0;
+  }
+  .beh-info { flex: 1; }
+  .beh-title { font-size: 13px; color: var(--text); margin-bottom: 6px; }
+  .beh-desc  { font-size: 11px; color: var(--muted); line-height: 1.65; }
+
+  /* Toggle switch */
+  .toggle-switch {
+    background: none; border: none; cursor: pointer; padding: 2px 0; flex-shrink: 0;
+  }
+  .ts-track {
+    display: block; width: 42px; height: 24px; border-radius: 99px;
+    background: var(--surface3, #2a2a2d); border: 1px solid var(--border2);
+    position: relative; transition: background 0.2s, border-color 0.2s;
+  }
+  .toggle-switch[aria-pressed="true"] .ts-track {
+    background: var(--accent); border-color: var(--accent);
+  }
+  .ts-thumb {
+    display: block; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--muted); position: absolute; top: 2px; left: 2px;
+    transition: transform 0.2s, background 0.2s;
+  }
+  .toggle-switch[aria-pressed="true"] .ts-thumb {
+    transform: translateX(18px); background: #1a1500;
+  }
 </style>
 </head>
 <body>
@@ -188,6 +218,7 @@
       <button class="stab active" onclick="showTab('keys',this)">keys</button>
       <button class="stab"        onclick="showTab('chords',this)">chords</button>
       <button class="stab"        onclick="showTab('cats',this)">categories</button>
+      <button class="stab"        onclick="showTab('behaviour',this)">behaviour</button>
     </div>
     <div class="s-body">
 
@@ -228,13 +259,26 @@
         </div>
         <div class="toggle-grid" id="cat-panel"></div>
       </div>
+
+      <!-- BEHAVIOUR -->
+      <div class="s-pane" id="pane-behaviour">
+        <div class="beh-row">
+          <div class="beh-info">
+            <div class="beh-title">Show answer on Next</div>
+            <div class="beh-desc">First tap reveals the answer; second tap advances to the next question. The "show answer" button is hidden while this is on.</div>
+          </div>
+          <button class="toggle-switch" id="toggle-autoreveal" onclick="toggleAutoReveal()" aria-pressed="false">
+            <span class="ts-track"><span class="ts-thumb"></span></span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
   <!-- ACTIVE CATEGORY PILLS -->
   <div class="cat-row" id="cat-row"></div>
 
-  <!-- DRILL CARD -->
+  <!-- EXERCISE CARD -->
   <div class="card">
     <div class="type-label"    id="c-type">—</div>
     <div class="key-display"   id="c-key">—</div>
@@ -261,7 +305,7 @@
     <div class="stat"><div class="stat-val" id="s-best">—</div><div class="stat-label">best sec</div></div>
     <div class="stat"><div class="stat-val" id="s-streak">0</div><div class="stat-label">streak</div></div>
   </div>
-  <div class="hint">space = next &nbsp;·&nbsp; r = reveal answer</div>
+  <div class="hint" id="hint-text">space = next &nbsp;·&nbsp; r = reveal answer</div>
 </div>
 
 <script>
@@ -425,6 +469,8 @@ const activeCats   = new Set(['degrees','intervals','chords']);
 
 let card=null, t0=null, tiv=null, elapsed=0;
 let st={n:0,sum:0,best:Infinity,streak:0};
+let autoReveal=false;   // "show answer on next" setting
+let awaitingNext=false; // true when answer is shown, waiting for second tap
 
 // ─── BUILD: KEY GRIDS ─────────────────────────────────────────────────────────
 
@@ -625,6 +671,49 @@ function showCard(c) {
 
 function reveal() { document.getElementById('c-answer').classList.add('visible'); }
 
+// ─── AUTO-REVEAL SETTING ──────────────────────────────────────────────────────
+
+function toggleAutoReveal() {
+  autoReveal = !autoReveal;
+  const btn = document.getElementById('toggle-autoreveal');
+  btn.setAttribute('aria-pressed', autoReveal);
+
+  // show/hide the reveal button
+  document.querySelector('.btn-reveal').style.display = autoReveal ? 'none' : '';
+
+  // update next button label & hint
+  syncNextBtn();
+
+  // update keyboard hint
+  document.getElementById('hint-text').textContent = autoReveal
+    ? 'space = reveal / next'
+    : 'space = next · r = reveal answer';
+
+  // if mid-question in auto mode, reset awaiting state cleanly
+  awaitingNext = false;
+  syncNextBtn();
+}
+
+function syncNextBtn() {
+  const btn = document.querySelector('.btn-next');
+  if (!autoReveal) {
+    btn.textContent = 'next →';
+    btn.style.background = 'var(--accent)';
+    btn.style.borderColor = 'var(--accent)';
+    btn.style.color = '#1a1500';
+  } else if (awaitingNext) {
+    btn.textContent = 'next →';
+    btn.style.background = 'var(--accent)';
+    btn.style.borderColor = 'var(--accent)';
+    btn.style.color = '#1a1500';
+  } else {
+    btn.textContent = 'show answer';
+    btn.style.background = 'var(--surface2)';
+    btn.style.borderColor = 'var(--border2)';
+    btn.style.color = 'var(--text)';
+  }
+}
+
 // ─── TIMER ────────────────────────────────────────────────────────────────────
 
 function startTimer() {
@@ -642,6 +731,36 @@ function stopTimer() { clearInterval(tiv); return elapsed; }
 // ─── NEXT ─────────────────────────────────────────────────────────────────────
 
 function next() {
+  if (autoReveal) {
+    if (!awaitingNext) {
+      // Phase 1: reveal answer, stop timer, record time
+      const t = stopTimer();
+      reveal();
+      awaitingNext = true;
+      if (card) {
+        st.n++; st.sum+=t;
+        if (t<st.best) st.best=t;
+        st.streak = t<5 ? st.streak+1 : 0;
+        document.getElementById('s-done').textContent   = st.n;
+        document.getElementById('s-avg').textContent    = (st.sum/st.n).toFixed(1);
+        document.getElementById('s-best').textContent   = st.best.toFixed(1);
+        document.getElementById('s-streak').textContent = st.streak;
+        document.getElementById('counter').textContent  = st.n+' done';
+      }
+      syncNextBtn();
+      return;
+    } else {
+      // Phase 2: advance to next card
+      awaitingNext = false;
+      card = makeCard();
+      showCard(card);
+      startTimer();
+      syncNextBtn();
+      return;
+    }
+  }
+
+  // Normal mode (autoReveal off)
   const t = stopTimer();
   if (card) {
     st.n++; st.sum+=t;
@@ -662,7 +781,7 @@ function next() {
 
 document.addEventListener('keydown', e => {
   if (e.code==='Space') { e.preventDefault(); next(); }
-  if (e.code==='KeyR')  reveal();
+  if (e.code==='KeyR' && !autoReveal) reveal();
 });
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
